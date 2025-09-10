@@ -5,36 +5,52 @@ It stores usernames and hashed passwords in a postgress sql database
 */
 import (
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
+	"log"
+	"os"
 	"net/http"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"strconv"
 )
 
-func loginHandler(dgpool *pgxpool.Pool) http.HandlerFunc{
-	return func (w http.ResponseHandler, r *http.Request) {
+func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
+	return func (w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
-		create := strconv.ParseBool(r.FormValue("create"))
+		create,_ := strconv.ParseBool(r.FormValue("create"))
+		fmt.Println(username," ",password," ",create)
 		l := LoginAttempt{username,password}
 
 		if !create {
-			err := l.ValidateAttempt(dgpool)
+			err := l.ValidateAttempt(dbpool)
 
 			if err == nil {
 				// todo actually write this part
-				w.Write([]byte("login successful"))
+				w.Write([]byte("login succesful"))
 			} else {
-				w.Write([]byte("login unsuccessful"))
+				w.Write([]byte("login unsuccesful"))
 			}
 		} else {
-			
+			err := l.AddtoDB(dbpool)
+
+			if err == nil {
+				w.Write([]byte("user created succesfully"))
+			} else {
+				w.Write([]byte("user not created"))
+			}
 		}
 	}
 }
 
 func main() {
 	// Start up http
+	dbpool, err := startDBConnection()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("DB Succesfully started")
+	defer dbpool.Close()
 
+	http.Handle("/login", loginHandler(dbpool))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

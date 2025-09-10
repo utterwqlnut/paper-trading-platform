@@ -6,10 +6,9 @@ PostgreSQL Database Handler for Logins
 import (
 	"errors"
 	"context"
-	"fmt"
 	"os"
-	"net/http"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,10 +20,11 @@ type LoginAttempt struct {
 func (l *LoginAttempt) ValidateAttempt(dbpool *pgxpool.Pool) error {
 	var hashed_password string
 	
-	err := dbpool.QueryRow(context.Background(), 
+	err := dbpool.QueryRow(
+		context.Background(), 
 		"SELECT password FROM users WHERE username=$1",
-		l.username)
-	.Scan(&hashed_password)
+		l.username,
+	).Scan(&hashed_password)
 	
 	if err != nil {
 		return err
@@ -48,13 +48,14 @@ func (l *LoginAttempt) AddtoDB(dbpool *pgxpool.Pool) error {
 		return errors.New("Could not encrypt password")
 	}
 
-	found := dgpool.QueryRow(context.Background(),
+	found := dbpool.QueryRow(
+		context.Background(),
 		"SELECT username FROM users WHERE username=$1",
-		l.username
+		l.username,
 	).Scan(&found_username)
 
-	if found == nil {
-		err := dbpool.Exec(context.Background(), 
+	if found == pgx.ErrNoRows {
+		_, err := dbpool.Exec(context.Background(), 
 			"INSERT INTO users (username, password) VALUES ($1, $2)",
 			l.username,
 			hashed_password,
@@ -69,10 +70,8 @@ func (l *LoginAttempt) AddtoDB(dbpool *pgxpool.Pool) error {
 		} else {
 			return nil // All good create user
 		}	
-	} else if err == pgx.ErrNoRows {
-		return errors.New("Username already exists")
 	} else {
-		return err // some issue with db
+		return errors.New("Username already exists")
 	}
 }
 
@@ -82,7 +81,7 @@ func startDBConnection() (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		return dgpool, nill
+		return dbpool, nil
 	}
 
 }
