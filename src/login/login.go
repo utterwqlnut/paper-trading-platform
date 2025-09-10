@@ -9,22 +9,27 @@ import (
 	"net/http"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/jackc/pgx/v5"
+	"strconv"
 )
 
 func loginHandler(dgpool *pgxpool.Pool) http.HandlerFunc{
 	return func (w http.ResponseHandler, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
-
+		create := strconv.ParseBool(r.FormValue("create"))
 		l := LoginAttempt{username,password}
 
-		err := l.ValidateAttempt(dgpool)
+		if !create {
+			err := l.ValidateAttempt(dgpool)
 
-		if err == nil {
-			// todo actually write this part
-			w.Write([]byte("login successful"))
+			if err == nil {
+				// todo actually write this part
+				w.Write([]byte("login successful"))
+			} else {
+				w.Write([]byte("login unsuccessful"))
+			}
 		} else {
-			w.Write([]byte("login unsuccessful"))
+			
 		}
 	}
 }

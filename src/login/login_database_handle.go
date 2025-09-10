@@ -22,7 +22,7 @@ func (l *LoginAttempt) ValidateAttempt(dbpool *pgxpool.Pool) error {
 	var hashed_password string
 	
 	err := dbpool.QueryRow(context.Background(), 
-		"select password from username where username=$1",
+		"SELECT password FROM users WHERE username=$1",
 		l.username)
 	.Scan(&hashed_password)
 	
@@ -38,6 +38,42 @@ func (l *LoginAttempt) ValidateAttempt(dbpool *pgxpool.Pool) error {
 		return nil // All good login
 	}
 	
+}
+
+func (l *LoginAttempt) AddtoDB(dbpool *pgxpool.Pool) error {
+	var found_username string
+	hashed_password, crypt_err := bcrypt.GenerateFromPassword([]byte(l.password),bcrypt.DefaultCost)
+
+	if crypt_err != nil {
+		return errors.New("Could not encrypt password")
+	}
+
+	found := dgpool.QueryRow(context.Background(),
+		"SELECT username FROM users WHERE username=$1",
+		l.username
+	).Scan(&found_username)
+
+	if found == nil {
+		err := dbpool.Exec(context.Background(), 
+			"INSERT INTO users (username, password) VALUES ($1, $2)",
+			l.username,
+			hashed_password,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		if err != nil {
+			return errors.New("Issue with database")
+		} else {
+			return nil // All good create user
+		}	
+	} else if err == pgx.ErrNoRows {
+		return errors.New("Username already exists")
+	} else {
+		return err // some issue with db
+	}
 }
 
 func startDBConnection() (*pgxpool.Pool, error) {
