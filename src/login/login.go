@@ -24,8 +24,8 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 			err := l.ValidateAttempt(dbpool)
 
 			if err == nil {
-				// todo actually write this part
 				w.Write([]byte("login succesful"))
+				// do all the other stuff
 			} else {
 				w.Write([]byte(err.Error()))
 			}
@@ -34,6 +34,8 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 
 			if err == nil {
 				w.Write([]byte("user created succesfully"))
+
+				// Do all the other stuff
 			} else {
 				w.Write([]byte(fmt.Sprintf(err.Error())))
 			}
