@@ -17,7 +17,7 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 		create,_ := strconv.ParseBool(r.FormValue("create"))
-		fmt.Println(username," ",password," ",create)
+
 		l := LoginAttempt{username,password}
 
 		if !create {
@@ -27,7 +27,7 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 				// todo actually write this part
 				w.Write([]byte("login succesful"))
 			} else {
-				w.Write([]byte("login unsuccesful"))
+				w.Write([]byte(err.Error()))
 			}
 		} else {
 			err := l.AddtoDB(dbpool)
@@ -35,7 +35,7 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 			if err == nil {
 				w.Write([]byte("user created succesfully"))
 			} else {
-				w.Write([]byte("user not created"))
+				w.Write([]byte(fmt.Sprintf(err.Error())))
 			}
 		}
 	}
