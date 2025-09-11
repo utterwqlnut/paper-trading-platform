@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"strconv"
+	"utterwqlnut/paper-trading-platform/src/helpers"
 )
 
 func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
+	creator_func := helpers.Creator()
 	return func (w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
@@ -24,8 +26,25 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 			err := l.ValidateAttempt(dbpool)
 
 			if err == nil {
+				cookie_token, err := creator_func(l.username)
+				
+				if err != nil {
+					w.Write([]byte(err.Error()))
+					return
+				}
+				
+				cookie := &http.Cookie{
+					Name:     "session_id",
+					Value:    cookie_token,
+					Path:     "/",       // cookie available for the entire domain
+					HttpOnly: true,      // prevents JS access (good for security)
+					Secure:   false,     // set to true if using HTTPS
+					MaxAge:   60*60*24,      // cookie expires in 1 hour
+				}
+
+				http.SetCookie(w, cookie)
 				w.Write([]byte("login succesful"))
-				// do all the other stuff
+
 			} else {
 				w.Write([]byte(err.Error()))
 			}
@@ -34,7 +53,6 @@ func loginHandler(dbpool *pgxpool.Pool) http.HandlerFunc{
 
 			if err == nil {
 				w.Write([]byte("user created succesfully"))
-
 				// Do all the other stuff
 			} else {
 				w.Write([]byte(fmt.Sprintf(err.Error())))
